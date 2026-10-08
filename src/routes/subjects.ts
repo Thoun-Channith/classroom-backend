@@ -1,7 +1,8 @@
 import express from "express"; // Import Express so we can create routes.
 import {and, desc, eq, getTableColumns, ilike, or, sql} from "drizzle-orm"; // Import database query helpers from Drizzle ORM.
 import {departments, subjects} from "../db/schema/index.js"; // Import the subjects and departments table schema.
-import {db} from "../db/index.js"; // Import the database connection instance.
+import {db} from "../db/index.js";
+import {parse} from "dotenv"; // Import the database connection instance.
 
 const router = express.Router(); // Create a router so we can define API routes in this file.
 
@@ -10,9 +11,8 @@ router.get("/", async(req, res)=>{ // Define a GET route for /subjects and handl
 
         const {search, department, page = 1, limit = 10} = req.query; // Read query params: search text, department filter, page number, and items per page.
 
-        const currentPage = Math.max(1, +page); // Make sure page is at least 1 and convert it from string to number.
-
-        const limitPerpage = Math.max(1, +limit); // Make sure limit is at least 1 and convert it to number.
+        const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
+        const limitPerpage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
 
         const offset = (currentPage - 1) * limitPerpage; // Calculate how many rows to skip for pagination.
 
@@ -28,12 +28,8 @@ router.get("/", async(req, res)=>{ // Define a GET route for /subjects and handl
         }
 
         if(department) { // If the user passed a department value, add a department-related filter.
-            filterConditions.push( // Add a new filter to the array.
-                or( // This is intended to match any of the department-related fields.
-                    ilike(subjects.name, `${search}`), // BUG: this should use the department value, not search.
-                    ilike(subjects.code, `${search}`) // BUG: this also uses the search value instead of department.
-                )
-            )
+            const deptPattern = `%${String(department).replace(/[%_]/g, '\\$&')}%`; // Create a pattern for case-insensitive matching.
+            filterConditions.push(ilike(departments.name, deptPattern))
         }
 
         const whereClause = filterConditions.length > 0 ? and(... filterConditions) : undefined; // Combine all filters with AND, or use no filter if none exist.
