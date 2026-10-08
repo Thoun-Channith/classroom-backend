@@ -19,10 +19,11 @@ router.get("/", async(req, res)=>{ // Define a GET route for /subjects and handl
         const filterConditions = [] // Store all search filters here before building the final WHERE clause.
 
         if(search) { // If the user passed a search keyword, add a search filter.
+            const searchPattern = `%${String(search).replace(/[\\%_]/g, '\\$&')}%`;
             filterConditions.push( // Add the search condition to the filter list.
                 or( // Search should match any of these fields.
-                    ilike(subjects.name, `${search}`), // Match subject name case-insensitively.
-                    ilike(subjects.code, `${search}`), // Match subject code case-insensitively.
+                    ilike(subjects.name, searchPattern), // Match subject name case-insensitively.
+                    ilike(subjects.code, searchPattern), // Match subject code case-insensitively.
                 )
             )
         }
