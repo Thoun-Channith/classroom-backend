@@ -1,55 +1,17 @@
-import { eq } from "drizzle-orm";
-import { db, pool } from "./db/index.js";
-import { demoUsers } from "./db/schema/index.js";
+import express from "express";
+import subjectsRouter from "./routes/subjects.js";
 
-async function main() {
-  try {
-    console.log("Performing CRUD operations...");
+const app = express();
+const PORT = 8000;
 
-    const [newUser] = await db
-      .insert(demoUsers)
-      .values({
-        name: "Admin User",
-        email: `admin-${Date.now()}@example.com`,
-      })
-      .returning();
+app.use(express.json());
 
-    if (!newUser) {
-      throw new Error("Failed to create user");
-    }
-    console.log("CREATE: New user created:", newUser);
+app.use('/api/subjects', subjectsRouter);
 
-    const [foundUser] = await db
-      .select()
-      .from(demoUsers)
-      .where(eq(demoUsers.id, newUser.id));
+app.get('/', (req, res) => {
+    res.send('Welcome to the Classroom API');
+});
 
-    if (!foundUser) {
-      throw new Error("Failed to find user");
-    }
-    console.log("READ: Found user:", foundUser);
-
-    const [updatedUser] = await db
-      .update(demoUsers)
-      .set({ name: "Super Admin" })
-      .where(eq(demoUsers.id, newUser.id))
-      .returning();
-
-    if (!updatedUser) {
-      throw new Error("Failed to update user");
-    }
-    console.log("UPDATE: User updated:", updatedUser);
-
-    await db.delete(demoUsers).where(eq(demoUsers.id, newUser.id));
-    console.log("DELETE: User deleted.");
-    console.log("CRUD operations completed successfully.");
-  } catch (error) {
-    console.error("Error performing CRUD operations:", error);
-    process.exitCode = 1;
-  } finally {
-    await pool.end();
-    console.log("Database pool closed.");
-  }
-}
-
-await main();
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});
